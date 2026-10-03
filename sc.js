@@ -35,14 +35,14 @@ document.addEventListener("DOMContentLoaded",function(){
         circle.style.setProperty("--progress-degree",`${progressDegree}%`);
     }
 
-    // NEW: puts the three circles back to their empty state
+    // puts the three circles back to their empty state
     function resetDisplay(){
         [
-            [easyLabel, easyProgress, "Easy"],
-            [mediumLabel, mediumProgress, "Medium"],
-            [hardLabel, hardProgress, "Hard"]
-        ].forEach(([label, circle, text]) => {
-            label.textContent = text;
+            [easyLabel, easyProgress],
+            [mediumLabel, mediumProgress],
+            [hardLabel, hardProgress]
+        ].forEach(([label, circle]) => {
+            label.textContent = "";
             circle.style.setProperty("--progress-degree", "0%");
         });
     }
@@ -60,16 +60,16 @@ document.addEventListener("DOMContentLoaded",function(){
         updateProgress(s_medium_qs,t_medium_qs,mediumLabel,mediumProgress);
         updateProgress(s_hard_qs,t_hard_qs,hardLabel,hardProgress);
 
-        // CHANGED: removed the "Acceptance rate" card, because the API
-        // does not return that field and it always showed "undefined"
+        // The API does not return an acceptance rate, so that card was removed.
+        // Ranking is formatted with commas (e.g. 13,67,369).
         const cardData = [
             {
                 label : "Total Solved",
                 value : data.totalSolved
             },
             {
-                label : "Ranking",
-                value : data.ranking
+                label : "Global Ranking",
+                value : data.ranking ? Number(data.ranking).toLocaleString("en-IN") : "N/A"
             }
         ]
 
@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
             searchButton.textContent = "Searching..";
             searchButton.disabled = true;
-            statsCardContainer.style.display = 'none';
+            statsContainer.classList.add("loading");
 
             const response = await fetch(url);
             if(!response.ok){
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
             const data = await response.json();
 
-            // NEW: the API can reply normally even for unknown users,
+            // The API can reply normally even for unknown users,
             // so check that real data came back before using it
             if(data.totalSolved === undefined){
                 throw new Error("User not found");
@@ -110,15 +110,13 @@ document.addEventListener("DOMContentLoaded",function(){
         }
         catch(error){
             console.log(error);
-            // CHANGED: reset the circles and show the message in the card area.
-            // Before, this replaced statsContainer, which deleted the circles.
             resetDisplay();
-            statsCardContainer.innerHTML = `<p>User not found, or the server could not be reached. Please try again.</p>`;
+            statsCardContainer.innerHTML = `<p class="error-msg">User not found, or the server could not be reached. Please try again.</p>`;
         }
         finally{
             searchButton.textContent = "Search";
             searchButton.disabled = false;
-            statsCardContainer.style.display = 'block';
+            statsContainer.classList.remove("loading");
         }
     }
 
@@ -127,6 +125,13 @@ document.addEventListener("DOMContentLoaded",function(){
 
         if(validateUsername(username)){
             fetchUserDetails(username);
+        }
+    })
+
+    // pressing Enter in the box also searches
+    usernameInput.addEventListener('keydown', (e)=> {
+        if(e.key === "Enter"){
+            searchButton.click();
         }
     })
 
