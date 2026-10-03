@@ -30,43 +30,47 @@ document.addEventListener("DOMContentLoaded",function(){
     }
 
     const updateProgress = (solved,total,label,circle) => {
-        console.log(solved,total);
         const progressDegree = Math.ceil(Number((solved/total)*100));
         label.textContent = `${solved}/${total}`
         circle.style.setProperty("--progress-degree",`${progressDegree}%`);
     }
 
+    // NEW: puts the three circles back to their empty state
+    function resetDisplay(){
+        [
+            [easyLabel, easyProgress, "Easy"],
+            [mediumLabel, mediumProgress, "Medium"],
+            [hardLabel, hardProgress, "Hard"]
+        ].forEach(([label, circle, text]) => {
+            label.textContent = text;
+            circle.style.setProperty("--progress-degree", "0%");
+        });
+    }
+
     const showData = (data)=> {
-        // console.log(data);
-        // const t_qs = data.totalQuestions;
         const t_easy_qs = data.totalEasy;
         const t_medium_qs = data.totalMedium;
         const t_hard_qs = data.totalHard;
 
-        // const s_qs = data.totalSolved;
         const s_easy_qs = data.easySolved;
         const s_medium_qs = data.mediumSolved;
         const s_hard_qs = data.hardSolved;
-        // console.log(t_hard_qs)
 
         updateProgress(s_easy_qs,t_easy_qs,easyLabel,easyProgress);
         updateProgress(s_medium_qs,t_medium_qs,mediumLabel,mediumProgress);
         updateProgress(s_hard_qs,t_hard_qs,hardLabel,hardProgress);
 
+        // CHANGED: removed the "Acceptance rate" card, because the API
+        // does not return that field and it always showed "undefined"
         const cardData = [
             {
                 label : "Total Solved",
                 value : data.totalSolved
             },
             {
-                label : "Accepatnce rate",
-                value : data.acceptanceRate
-            },
-            {
                 label : "Ranking",
                 value : data.ranking
             }
-
         ]
 
         statsCardContainer.innerHTML = cardData.map(
@@ -79,9 +83,6 @@ document.addEventListener("DOMContentLoaded",function(){
                 `
             }
         ).join("")
-
-        
-
     }
 
     async function fetchUserDetails(username) {
@@ -98,37 +99,35 @@ document.addEventListener("DOMContentLoaded",function(){
             }
 
             const data = await response.json();
-            
-            showData(data);
 
-            // displayUserData(data);
-            
+            // NEW: the API can reply normally even for unknown users,
+            // so check that real data came back before using it
+            if(data.totalSolved === undefined){
+                throw new Error("User not found");
+            }
+
+            showData(data);
         }
         catch(error){
             console.log(error);
-            statsContainer.innerHTML = `<p>No Data Found</p>`;
-
+            // CHANGED: reset the circles and show the message in the card area.
+            // Before, this replaced statsContainer, which deleted the circles.
+            resetDisplay();
+            statsCardContainer.innerHTML = `<p>User not found, or the server could not be reached. Please try again.</p>`;
         }
         finally{
             searchButton.textContent = "Search";
             searchButton.disabled = false;
             statsCardContainer.style.display = 'block';
         }
-
     }
-
-    // function displayUserData(data){
-
-    // }
 
     searchButton.addEventListener('click', ()=> {
         const username = usernameInput.value;
-        // console.log(username);
 
         if(validateUsername(username)){
             fetchUserDetails(username);
         }
-
     })
 
 })
